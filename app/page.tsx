@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import ChannelCard from "@/components/channel-card"
-import SummaryBar from "@/components/summary-bar"
+import { useEffect, useState } from "react";
+import ChannelCard from "@/components/channel-card";
+import SummaryBar from "@/components/summary-bar";
+import { supabase } from "@/lib/supabaseClient";
 
 const TRIBES_AND_REGIONS = [
   { id: "tangkhul", name: "Tangkhul", region: "Manipur" },
@@ -13,7 +14,7 @@ const TRIBES_AND_REGIONS = [
   { id: "assamese", name: "Assamese", region: "Assam" },
   { id: "manipuri", name: "Manipuri", region: "Manipur" },
   { id: "tripuri", name: "Tripuri", region: "Tripura" },
-]
+];
 
 const MOCK_CHANNELS_BY_TRIBE = {
   tangkhul: [
@@ -1312,33 +1313,60 @@ const MOCK_CHANNELS_BY_TRIBE = {
       rank: 20,
     },
   ],
-}
+};
 
 export default function YouTubeDashboard() {
-  const [selectedTribe, setSelectedTribe] = useState(TRIBES_AND_REGIONS[0].id)
-  const [sortBy, setSortBy] = useState<"subscribers" | "views">("subscribers")
+  const [selectedTribe, setSelectedTribe] = useState(TRIBES_AND_REGIONS[0].id);
+  const [sortBy, setSortBy] = useState<"subscribers" | "views">("subscribers");
 
-  const channels = MOCK_CHANNELS_BY_TRIBE[selectedTribe as keyof typeof MOCK_CHANNELS_BY_TRIBE] || []
+  const channels =
+    MOCK_CHANNELS_BY_TRIBE[
+      selectedTribe as keyof typeof MOCK_CHANNELS_BY_TRIBE
+    ] || [];
 
   const sortedChannels = [...channels].sort((a, b) => {
     if (sortBy === "subscribers") {
-      return b.subscribers - a.subscribers
+      return b.subscribers - a.subscribers;
     }
-    return b.views - a.views
-  })
+    return b.views - a.views;
+  });
 
-  const totalSubscribers = sortedChannels.reduce((sum, ch) => sum + ch.subscribers, 0)
-  const totalViews = sortedChannels.reduce((sum, ch) => sum + ch.views, 0)
+  const totalSubscribers = sortedChannels.reduce(
+    (sum, ch) => sum + ch.subscribers,
+    0
+  );
+  const totalViews = sortedChannels.reduce((sum, ch) => sum + ch.views, 0);
 
-  const currentTribe = TRIBES_AND_REGIONS.find((t) => t.id === selectedTribe)
+  const currentTribe = TRIBES_AND_REGIONS.find((t) => t.id === selectedTribe);
+  // const [channelsData, setChannels] = useState<any[]>([]);
+
+  // useEffect(() => {
+  //   async function fetchChannels() {
+  //     const { data, error } = await supabase
+  //       .from("channels")
+  //       .select(
+  //         "channel_id, channel_name, channel_url, channel_stats(subscribers, views, recorded_at)"
+  //       )
+  //       .order("channel_name");
+
+  //     if (error) console.error(error);
+  //     else setChannels(data);
+  //   }
+
+  //   fetchChannels();
+  // }, []);
 
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-foreground">YouTube Tribal Top Channels</h1>
-          <p className="mt-2 text-muted-foreground">Explore the top-performing YouTube channels by tribe and region</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            YouTube Tribal Top Channels
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Explore the top-performing YouTube channels by tribe and region
+          </p>
         </div>
       </div>
 
@@ -1347,7 +1375,9 @@ export default function YouTubeDashboard() {
         {/* Filters */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">Select Tribe & Region</label>
+            <label className="text-sm font-medium text-foreground">
+              Select Tribe & Region
+            </label>
             <select
               value={selectedTribe}
               onChange={(e) => setSelectedTribe(e.target.value)}
@@ -1362,7 +1392,9 @@ export default function YouTubeDashboard() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">Sort By</label>
+            <label className="text-sm font-medium text-foreground">
+              Sort By
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={() => setSortBy("subscribers")}
@@ -1389,13 +1421,22 @@ export default function YouTubeDashboard() {
         </div>
 
         {/* Summary Bar */}
-        <SummaryBar totalSubscribers={totalSubscribers} totalViews={totalViews} />
+        <SummaryBar
+          totalSubscribers={totalSubscribers}
+          totalViews={totalViews}
+        />
 
         {/* Tribe Info */}
         <div className="mb-6 rounded-lg border border-border bg-card p-4">
           <p className="text-sm text-muted-foreground">
-            Showing top channels for <span className="font-semibold text-foreground">{currentTribe?.name}</span> tribe
-            in <span className="font-semibold text-foreground">{currentTribe?.region}</span>
+            Showing top channels for{" "}
+            <span className="font-semibold text-foreground">
+              {currentTribe?.name}
+            </span>{" "}
+            tribe in{" "}
+            <span className="font-semibold text-foreground">
+              {currentTribe?.region}
+            </span>
           </p>
         </div>
 
@@ -1407,5 +1448,5 @@ export default function YouTubeDashboard() {
         </div>
       </div>
     </main>
-  )
+  );
 }
