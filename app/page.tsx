@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ChannelCard from "@/components/channel-card";
 import SummaryBar from "@/components/summary-bar";
-import { supabase } from "@/lib/supabaseClient";
 
 const TRIBES_AND_REGIONS = [
   { id: "tangkhul", name: "Tangkhul", region: "Manipur" },
@@ -1338,23 +1337,6 @@ export default function YouTubeDashboard() {
   const totalViews = sortedChannels.reduce((sum, ch) => sum + ch.views, 0);
 
   const currentTribe = TRIBES_AND_REGIONS.find((t) => t.id === selectedTribe);
-  // const [channelsData, setChannels] = useState<any[]>([]);
-
-  // useEffect(() => {
-  //   async function fetchChannels() {
-  //     const { data, error } = await supabase
-  //       .from("channels")
-  //       .select(
-  //         "channel_id, channel_name, channel_url, channel_stats(subscribers, views, recorded_at)"
-  //       )
-  //       .order("channel_name");
-
-  //     if (error) console.error(error);
-  //     else setChannels(data);
-  //   }
-
-  //   fetchChannels();
-  // }, []);
 
   return (
     <main className="min-h-screen bg-background">
