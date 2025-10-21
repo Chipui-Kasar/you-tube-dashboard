@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { createBrowserClient } from "@supabase/ssr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,16 +26,61 @@ interface Channel {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [user, setUser] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+          router.push("/admin/login")
+          return
+        }
+
+        setUser(user)
+
+        // Check if user is admin
+        const { data: adminUser } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("email", user.email)
+          .eq("is_active", true)
+          .single()
+
+        if (!adminUser) {
+          toast.error("You do not have admin access")
+          await supabase.auth.signOut()
+          router.push("/admin/login")
+          return
+        }
+
+        setIsAdmin(true)
+      } catch (error) {
+        console.error("[v0] Auth check error:", error)
+        router.push("/admin/login")
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router, supabase])
 
   // Fetch channels from Supabase
   const fetchChannels = async () => {
@@ -53,8 +99,21 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    fetchChannels()
-  }, [])
+    if (isAdmin) {
+      fetchChannels()
+    }
+  }, [isAdmin])
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      toast.success("Logged out successfully")
+      router.push("/admin/login")
+    } catch (error) {
+      console.error("[v0] Logout error:", error)
+      toast.error("Failed to logout")
+    }
+  }
 
   // Handle add/edit channel
   const handleSaveChannel = async (formData: {
@@ -133,13 +192,33 @@ export default function AdminDashboard() {
       channel.youtube_channel_id.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
+  if (authLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Checking authentication...</p>
+      </main>
+    )
+  }
+
+  if (!isAdmin) {
+    return null
+  }
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">Manage YouTube channels by tribe and region</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+              <p className="mt-2 text-muted-foreground">Manage YouTube channels by tribe and region</p>
+              {user && <p className="mt-1 text-sm text-muted-foreground">Logged in as: {user.email}</p>}
+            </div>
+            <Button onClick={handleLogout} variant="outline">
+              Logout
+            </Button>
+          </div>
         </div>
       </div>
 

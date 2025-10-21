@@ -1,8 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getAdminUser } from "@/lib/supabase/auth"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const adminUser = await getAdminUser()
+    if (!adminUser) {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 })
+    }
+
     const supabase = await createAdminClient()
     const body = await request.json()
     const id = params.id
@@ -30,6 +36,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const adminUser = await getAdminUser()
+    if (!adminUser) {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 })
+    }
+
     const supabase = await createAdminClient()
     const id = params.id
 

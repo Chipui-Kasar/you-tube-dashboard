@@ -1,8 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getAdminUser } from "@/lib/supabase/auth"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
+    const adminUser = await getAdminUser()
+    if (!adminUser) {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 })
+    }
+
     const supabase = await createAdminClient()
     const body = await request.json()
 
