@@ -17,7 +17,21 @@ export async function GET() {
 
     const supabase = await createClient()
 
-    const { data, error } = await supabase.from("channels").select("*").order("subscribers", { ascending: false })
+    const { data, error } = await supabase
+      .from("channels")
+      .select(
+        `
+        id,
+        youtube_channel_id,
+        channel_name,
+        tribe,
+        region,
+        thumbnail_url,
+        created_at,
+        updated_at
+      `,
+      )
+      .order("created_at", { ascending: false })
 
     if (error) {
       console.error("[v0] Supabase error:", error.message)
@@ -34,7 +48,25 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data || [])
+    const channelsWithStats = await Promise.all(
+      (data || []).map(async (channel) => {
+        const { data: latestStats } = await supabase
+          .from("channel_stats_logs")
+          .select("subscribers, views")
+          .eq("channel_id", channel.id)
+          .order("recorded_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        return {
+          ...channel,
+          subscribers: latestStats?.subscribers || 0,
+          views: latestStats?.views || 0,
+        }
+      }),
+    )
+
+    return NextResponse.json(channelsWithStats || [])
   } catch (error) {
     console.error("[v0] Error fetching channels:", error)
     return NextResponse.json({ error: "Failed to fetch channels" }, { status: 500 })

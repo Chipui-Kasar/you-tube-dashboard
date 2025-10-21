@@ -38,13 +38,16 @@ export default function YouTubeDashboard() {
   const [sortBy, setSortBy] = useState<"subscribers" | "views">("subscribers")
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
 
   useEffect(() => {
-    const fetchChannels = async () => {
+    const fetchAndSyncChannels = async () => {
       try {
         setLoading(true)
         setError(null)
+
+        // First fetch channels
         const response = await fetch("/api/channels")
 
         if (!response.ok) {
@@ -57,6 +60,28 @@ export default function YouTubeDashboard() {
         const data = await response.json()
         console.log("[v0] Fetched channels:", data)
         setChannels(Array.isArray(data) ? data : [])
+
+        // Then auto-sync stats
+        console.log("[v0] Auto-syncing YouTube stats...")
+        setSyncing(true)
+        const syncResponse = await fetch("/api/channels/sync-stats", {
+          method: "POST",
+        })
+
+        if (syncResponse.ok) {
+          const syncResult = await syncResponse.json()
+          console.log("[v0] Sync result:", syncResult)
+
+          // Fetch updated channels with new stats
+          const updatedResponse = await fetch("/api/channels")
+          if (updatedResponse.ok) {
+            const updatedData = await updatedResponse.json()
+            console.log("[v0] Updated channels with stats:", updatedData)
+            setChannels(Array.isArray(updatedData) ? updatedData : [])
+          }
+        } else {
+          console.error("[v0] Sync failed:", await syncResponse.text())
+        }
       } catch (error) {
         console.error("[v0] Error fetching channels:", error)
         setError({
@@ -65,10 +90,11 @@ export default function YouTubeDashboard() {
         })
       } finally {
         setLoading(false)
+        setSyncing(false)
       }
     }
 
-    fetchChannels()
+    fetchAndSyncChannels()
   }, [])
 
   const tribeChannels = channels.filter((ch) => ch.tribe.toLowerCase() === selectedTribe.toLowerCase())
@@ -87,6 +113,7 @@ export default function YouTubeDashboard() {
 
   const handleSyncStats = async () => {
     try {
+      setSyncing(true)
       const response = await fetch("/api/channels/sync-stats", {
         method: "POST",
       })
@@ -102,6 +129,8 @@ export default function YouTubeDashboard() {
     } catch (error) {
       console.error("[v0] Error syncing stats:", error)
       toast.error("Failed to sync statistics")
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -118,8 +147,8 @@ export default function YouTubeDashboard() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleSyncStats} variant="outline">
-                Sync Stats
+              <Button onClick={handleSyncStats} variant="outline" disabled={syncing}>
+                {syncing ? "Syncing..." : "Sync Stats"}
               </Button>
               <Button asChild>
                 <a href="/admin">Admin</a>
@@ -140,6 +169,7 @@ export default function YouTubeDashboard() {
               <ol className="list-inside list-decimal space-y-1">
                 <li>Go to the "Vars" section in the v0 sidebar</li>
                 <li>Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from your Supabase project</li>
+                <li>Add YOUTUBE_API_KEY from your Google Cloud Console</li>
                 <li>Run the SQL migration: scripts/01-create-channels-table.sql</li>
                 <li>Refresh this page</li>
               </ol>
