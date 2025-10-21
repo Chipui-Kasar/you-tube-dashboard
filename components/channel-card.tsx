@@ -1,25 +1,15 @@
-import { Card } from "@/components/ui/card"
+import { Card } from "@/components/ui/card";
 
 interface Channel {
-  id: number
-  channel_name: string
-  subscribers: number
-  views: number
-  thumbnail_url: string
-  rank: number
+  id: number;
+  channel_name: string;
+  subscribers: number;
+  views: number;
+  thumbnail_url: string;
+  rank: number;
 }
 
 export default function ChannelCard({ channel }: { channel: Channel }) {
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + "M"
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "K"
-    }
-    return num.toString()
-  }
-
   return (
     <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary">
       <div className="relative p-4">
@@ -46,14 +36,18 @@ export default function ChannelCard({ channel }: { channel: Channel }) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Subscribers</span>
-            <span className="font-semibold text-foreground">{formatNumber(channel.subscribers)}</span>
+            <span className="font-semibold text-foreground">
+              {channel.subscribers}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Total Views</span>
-            <span className="font-semibold text-foreground">{formatNumber(channel.views)}</span>
+            <span className="font-semibold text-foreground">
+              {channel.views}
+            </span>
           </div>
         </div>
       </div>
     </Card>
-  )
+  );
 }
