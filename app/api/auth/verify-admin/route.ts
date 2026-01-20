@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       },
     )
 
+    console.log("[v0] Verifying admin for email:", email)
+
     // Check if user is an admin
     const { data: adminUser, error } = await supabase
       .from("admin_users")
@@ -38,6 +40,8 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
       .eq("is_active", true)
       .maybeSingle()
+
+    console.log("[v0] Admin user query result:", { found: !!adminUser, error: error?.message })
 
     if (error) {
       console.error("[v0] Error verifying admin:", error)

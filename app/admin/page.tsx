@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createBrowserClient } from "@supabase/ssr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -36,40 +35,18 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  )
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
+        const response = await fetch("/api/auth/verify-session")
 
-        if (!user) {
+        if (!response.ok) {
           router.push("/admin/login")
           return
         }
 
-        setUser(user)
-
-        // Check if user is admin
-        const { data: adminUser } = await supabase
-          .from("admin_users")
-          .select("*")
-          .eq("email", user.email)
-          .eq("is_active", true)
-          .single()
-
-        if (!adminUser) {
-          toast.error("You do not have admin access")
-          await supabase.auth.signOut()
-          router.push("/admin/login")
-          return
-        }
-
+        const { user: sessionUser } = await response.json()
+        setUser(sessionUser)
         setIsAdmin(true)
       } catch (error) {
         console.error("[v0] Auth check error:", error)
@@ -80,15 +57,17 @@ export default function AdminDashboard() {
     }
 
     checkAuth()
-  }, [router, supabase])
+  }, [router])
 
   // Fetch channels from Supabase
   const fetchChannels = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from("channels").select("*").order("created_at", { ascending: false })
+      const response = await fetch("/api/channels")
 
-      if (error) throw error
+      if (!response.ok) throw new Error("Failed to fetch channels")
+
+      const data = await response.json()
       setChannels(data || [])
     } catch (error) {
       console.error("Error fetching channels:", error)
@@ -106,7 +85,12 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      })
+
+      if (!response.ok) throw new Error("Logout failed")
+
       toast.success("Logged out successfully")
       router.push("/admin/login")
     } catch (error) {

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
-import { createBrowserClient } from "@supabase/ssr"
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -16,47 +15,30 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-  )
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      // Sign in with Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      console.log("[v0] Attempting login with email:", email)
+
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       })
 
-      if (error) {
-        console.error("[v0] Sign in error:", error)
-        toast.error(error.message)
+      const result = await response.json()
+      console.log("[v0] Login response:", { success: response.ok, hasError: !!result.error })
+
+      if (!response.ok) {
+        console.error("[v0] Login failed:", result.error)
+        toast.error(result.error || "Login failed")
         return
       }
 
-      if (data.user) {
-        const response = await fetch("/api/auth/verify-admin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        })
-
-        const result = await response.json()
-
-        if (!response.ok || !result.isAdmin) {
-          await supabase.auth.signOut()
-          toast.error("You do not have admin access. Please contact the administrator.")
-          console.error("[v0] User is not an admin:", email)
-          return
-        }
-
-        toast.success("Login successful!")
-        router.push("/admin")
-      }
+      toast.success("Login successful!")
+      router.push("/admin")
     } catch (error) {
       console.error("[v0] Login error:", error)
       toast.error("An error occurred during login")
