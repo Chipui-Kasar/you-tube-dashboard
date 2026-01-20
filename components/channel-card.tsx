@@ -8,6 +8,7 @@ interface Channel {
   views: number;
   thumbnail_url: string;
   rank: number;
+  source:string;
 }
 
 export default function ChannelCard({ channel }: { channel: Channel }) {
@@ -18,14 +19,23 @@ export default function ChannelCard({ channel }: { channel: Channel }) {
         <h3 className="text-sm font-semibold mb-3 text-foreground">{channel.channel_name}</h3>
 
         {/* Live Subscriber Counter */}
+        {
+          channel.source ==="socialcounts"?
         <iframe 
           height="100px" 
           width="100%" 
           frameBorder="0" 
           src={`https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed`}
           style={{ border: "0", width: "100%", height: "100px" }}
+        />:
+        <iframe 
+          height="80px"
+          width="100%"
+          frameBorder="0" 
+          src={`https://livecounts.io/embed/youtube-live-subscriber-counter/${channel.youtube_channel_id}`} style={{ border: "0", width:"300px", height:"80px"}}
+          style={{ border: "0", width: "100%", height: "100px" }}
         />
-
+}
         {/* Stats */}
         <div className="space-y-2 mt-3">
           <div className="flex items-center justify-between">
