@@ -36,7 +36,7 @@ export default function ChannelCard({ channel }: { channel: Channel }) {
                 width="100%" 
                 frameBorder="0" 
                 src={`https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed?counter=0&fullscreen=true`}
-                style={{ border: "0", width: "100%", height: "20px", fontSize:"16px" }}
+                style={{ border: "0", width: "100%", height: "30px", fontSize:"16px" }}
               />
             </span>
           </div>
