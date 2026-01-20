@@ -7,9 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
+  title: 'Top Tangkhul Youtubers',
   description: 'Tangkhul Youtubers competing with Mr. Beast',
-  generator: 'v0.app',
+  generator: 'Chipui kasar',
 }
 
 export default function RootLayout({
