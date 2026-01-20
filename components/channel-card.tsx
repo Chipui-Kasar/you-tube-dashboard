@@ -31,7 +31,13 @@ export default function ChannelCard({ channel }: { channel: Channel }) {
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Total Views</span>
             <span className="font-semibold text-foreground">
-              {channel.views?.toLocaleString() || "N/A"}
+              <iframe 
+                height="100px" 
+                width="100%" 
+                frameBorder="0" 
+                src={`https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed?counter=0&fullscreen=true`}
+                style={{ border: "0", width: "100%", height: "20px", fontSize:"16px" }}
+              />
             </span>
           </div>
         </div>
