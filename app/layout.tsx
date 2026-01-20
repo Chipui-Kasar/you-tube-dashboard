@@ -8,7 +8,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'v0 App',
-  description: 'Created with v0',
+  description: 'Tangkhul Youtubers competing with Mr. Beast',
   generator: 'v0.app',
 }
 
