@@ -17,32 +17,38 @@ export default function AdminLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!email || !password) {
+      toast.error("Please enter both email and password")
+      return
+    }
+
     setLoading(true)
 
     try {
-      console.log("[v0] Attempting login with email:", email)
-
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // Include cookies in the request
       })
 
       const result = await response.json()
-      console.log("[v0] Login response:", { success: response.ok, hasError: !!result.error })
 
       if (!response.ok) {
-        console.error("[v0] Login failed:", result.error)
         toast.error(result.error || "Login failed")
+        setLoading(false)
         return
       }
 
       toast.success("Login successful!")
-      router.push("/admin")
+      // Use a small delay to ensure the cookie is set before redirecting
+      setTimeout(() => {
+        router.push("/admin")
+      }, 500)
     } catch (error) {
-      console.error("[v0] Login error:", error)
+      console.error("Login error:", error)
       toast.error("An error occurred during login")
-    } finally {
       setLoading(false)
     }
   }
