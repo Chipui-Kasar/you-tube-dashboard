@@ -277,6 +277,8 @@ export default function YouTubeDashboard() {
           totalSubscribers={totalSubscribers}
           totalViews={totalViews}
         />
+       
+
 
         {/* Tribe Info */}
         <div className="mb-6 rounded-lg border border-border bg-card p-4">

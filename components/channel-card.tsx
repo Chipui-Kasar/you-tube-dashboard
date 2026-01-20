@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 interface Channel {
   id: number;
   channel_name: string;
+  youtube_channel_id: string;
   subscribers: number;
   views: number;
   thumbnail_url: string;
@@ -12,38 +13,25 @@ interface Channel {
 export default function ChannelCard({ channel }: { channel: Channel }) {
   return (
     <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary">
-      <div className="relative p-4">
-        {/* Rank Badge */}
-        <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-          #{channel.rank}
-        </div>
+      <div className="relative p-2">
+        {/* Channel Name */}
+        <h3 className="text-sm font-semibold mb-3 text-foreground">{channel.channel_name}</h3>
 
-        {/* Thumbnail */}
-        <div className="mb-4 overflow-hidden rounded-lg bg-muted">
-          <img
-            src={channel.thumbnail_url || "/placeholder.svg"}
-            alt={channel.channel_name}
-            className="h-24 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        </div>
-
-        {/* Channel Info */}
-        <h3 className="mb-3 line-clamp-2 font-semibold text-foreground group-hover:text-primary">
-          {channel.channel_name}
-        </h3>
+        {/* Live Subscriber Counter */}
+        <iframe 
+          height="100px" 
+          width="100%" 
+          frameBorder="0" 
+          src={`https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed`}
+          style={{ border: "0", width: "100%", height: "100px" }}
+        />
 
         {/* Stats */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Subscribers</span>
-            <span className="font-semibold text-foreground">
-              {channel.subscribers}
-            </span>
-          </div>
+        <div className="space-y-2 mt-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Total Views</span>
             <span className="font-semibold text-foreground">
-              {channel.views}
+              {channel.views?.toLocaleString() || "N/A"}
             </span>
           </div>
         </div>
