@@ -29,36 +29,26 @@ export async function getAuthenticatedUser() {
 }
 
 export async function getAdminUser() {
-  const user = await getAuthenticatedUser()
-  if (!user) return null
+  try {
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get("admin_session")
 
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // Handle cookie setting errors
-          }
-        },
-      },
-    },
-  )
+    if (!sessionCookie || !sessionCookie.value) {
+      console.log("[v0] No admin session cookie found")
+      return null
+    }
 
-  // Check if user is an admin by verifying email in admin_users table
-  const { data: adminUser } = await supabase
-    .from("admin_users")
-    .select("*")
-    .eq("email", user.email)
-    .eq("is_active", true)
-    .single()
+    const session = JSON.parse(sessionCookie.value)
+    
+    if (!session || !session.email) {
+      console.log("[v0] Invalid session data")
+      return null
+    }
 
-  return adminUser ? user : null
+    console.log("[v0] Admin user verified:", session.email)
+    return session
+  } catch (error) {
+    console.error("[v0] Error verifying admin user:", error)
+    return null
+  }
 }
