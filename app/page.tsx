@@ -13,7 +13,6 @@ const TRIBES_AND_REGIONS = [
   { id: "garo", name: "Garo", region: "Meghalaya" },
   { id: "meitei", name: "Meitei", region: "Manipur" },
   { id: "assamese", name: "Assamese", region: "Assam" },
-  { id: "manipuri", name: "Manipuri", region: "Manipur" },
   { id: "tripuri", name: "Tripuri", region: "Tripura" },
 ];
 
@@ -201,7 +200,7 @@ export default function YouTubeDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
         {error && (
           <div className="mb-8 rounded-lg border border-red-200 bg-red-50 p-4">
             <h3 className="font-semibold text-red-900">{error.error}</h3>
@@ -306,7 +305,7 @@ export default function YouTubeDashboard() {
             </p>
           </div>
         ) : (
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {sortedChannels.map((channel, index) => (
               <ChannelCard
                 key={channel.id}
