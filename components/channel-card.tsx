@@ -1,7 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCompactNumber } from "@/lib/utils";
-import { Eye, Users, Youtube } from "lucide-react";
+import { Crown, Youtube } from "lucide-react";
 
 interface Channel {
   id: number;
@@ -15,78 +14,84 @@ interface Channel {
 }
 
 const RANK_STYLES: Record<number, string> = {
-  1: "bg-gradient-to-br from-yellow-400 to-amber-500 text-amber-950",
-  2: "bg-gradient-to-br from-slate-300 to-slate-400 text-slate-900",
-  3: "bg-gradient-to-br from-amber-600 to-amber-800 text-amber-50",
+  1: "bg-gradient-to-br from-yellow-400 to-amber-500 text-amber-950 ring-2 ring-yellow-400/40",
+  2: "bg-gradient-to-br from-slate-300 to-slate-400 text-slate-900 ring-2 ring-slate-300/40",
+  3: "bg-gradient-to-br from-amber-600 to-amber-800 text-amber-50 ring-2 ring-amber-600/40",
 };
 
-export default function ChannelCard({ channel }: { channel: Channel }) {
+// The live-counter widget is a fixed layout: a 96px avatar on the left, and
+// a name+number text column to its right (name on top, number below). We
+// only want the number, so the iframe is rendered at a fixed natural width
+// (wide enough that the widget never truncates the number) and shifted up
+// and left inside a clipped wrapper so just the number cell is visible.
+const WIDGET_WIDTH = 340;
+const WIDGET_HEIGHT = 98;
+const NUMBER_COL_LEFT_OFFSET = 114;
+const NUMBER_ROW_TOP_OFFSET = 47;
+
+export default function ChannelCard({
+  channel,
+  metric,
+}: {
+  channel: Channel;
+  metric: "subscribers" | "views";
+}) {
   const rankStyle =
     RANK_STYLES[channel.rank] ?? "bg-primary text-primary-foreground";
   const liveUrl = `https://www.youtube.com/channel/${channel.youtube_channel_id}/live`;
-
-  const subscriberCounterUrl =
-    channel.source === "socialcounts"
-      ? `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed`
-      : `https://livecounts.io/embed/youtube-live-subscriber-counter/${channel.youtube_channel_id}`;
-
-  const viewCounterUrl = `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed?counter=0&fullscreen=true`;
+  const counterUrl =
+    metric === "views"
+      ? `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed?counter=0`
+      : `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed`;
 
   return (
-    <Card className="group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10">
+    <Card
+      className="animate-row-enter group flex flex-row items-center gap-3 p-3 transition-all duration-200 hover:border-primary/50 hover:bg-muted/40 hover:shadow-md"
+      style={{ animationDelay: `${Math.min(channel.rank * 30, 400)}ms` }}
+    >
       <div
-        className={`absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold shadow-sm ${rankStyle}`}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${rankStyle}`}
       >
-        #{channel.rank}
+        {channel.rank === 1 ? (
+          <Crown className="size-3.5 fill-current" />
+        ) : (
+          channel.rank
+        )}
       </div>
 
-      <div className="mb-4 flex items-center gap-3 pr-8">
-        <img
-          src={channel.thumbnail_url || "/placeholder.svg"}
-          alt={channel.channel_name}
-          className="h-14 w-14 shrink-0 rounded-full border border-border object-cover"
-        />
-        <h3 className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+      <img
+        src={channel.thumbnail_url || "/placeholder.svg"}
+        alt={channel.channel_name}
+        className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover transition-transform duration-200 group-hover:scale-105"
+      />
+
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
           {channel.channel_name}
         </h3>
-      </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <div className="min-w-0 rounded-lg bg-muted/60 p-2.5">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Users className="size-3.5 shrink-0" />
-            <span className="truncate text-[11px]">Subscribers</span>
-          </div>
-          {channel.source ? (
-            <iframe
-              title={`${channel.channel_name} live subscriber count`}
-              src={subscriberCounterUrl}
-              className="mt-1 h-10 w-full rounded border-0"
-              scrolling="no"
-            />
-          ) : (
-            <p className="mt-1 truncate text-base font-bold text-foreground">
-              {formatCompactNumber(channel.subscribers)}
-            </p>
-          )}
+        <div className="mb-0.5 flex items-center gap-1">
+          <span className="relative flex size-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-red-600" />
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-500">
+            Live {metric === "views" ? "views" : "subscribers"}
+          </span>
         </div>
-        <div className="min-w-0 rounded-lg bg-muted/60 p-2.5">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Eye className="size-3.5 shrink-0" />
-            <span className="truncate text-[11px]">Views</span>
-          </div>
-          {channel.source ? (
-            <iframe
-              title={`${channel.channel_name} live view count`}
-              src={viewCounterUrl}
-              className="mt-1 h-10 w-full rounded border-0"
-              scrolling="no"
-            />
-          ) : (
-            <p className="mt-1 truncate text-base font-bold text-foreground">
-              {formatCompactNumber(channel.views)}
-            </p>
-          )}
+        <div className="relative h-9 w-full max-w-[180px] overflow-hidden rounded-md ring-1 ring-inset ring-border/50">
+          <iframe
+            key={metric}
+            title={`${channel.channel_name} live ${metric === "views" ? "view" : "subscriber"} count`}
+            src={counterUrl}
+            scrolling="no"
+            className="absolute grayscale-[35%] contrast-125 border-0"
+            style={{
+              top: -NUMBER_ROW_TOP_OFFSET,
+              left: -NUMBER_COL_LEFT_OFFSET,
+              width: WIDGET_WIDTH,
+              height: WIDGET_HEIGHT,
+            }}
+          />
         </div>
       </div>
 
@@ -94,10 +99,10 @@ export default function ChannelCard({ channel }: { channel: Channel }) {
         href={liveUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+        title="Watch on YouTube"
+        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm transition-all duration-200 hover:scale-110 hover:bg-red-700 hover:shadow-md"
       >
         <Youtube className="size-4 shrink-0" />
-        Watch on YouTube
       </a>
     </Card>
   );
@@ -105,16 +110,14 @@ export default function ChannelCard({ channel }: { channel: Channel }) {
 
 export function ChannelCardSkeleton() {
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-center gap-3 pr-8">
-        <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
-        <Skeleton className="h-4 w-full" />
+    <Card className="flex flex-row items-center gap-3 p-3">
+      <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+      <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
+      <div className="min-w-0 flex-1">
+        <Skeleton className="mb-1.5 h-4 w-2/3" />
+        <Skeleton className="h-5 w-1/2" />
       </div>
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <Skeleton className="h-16 rounded-lg" />
-        <Skeleton className="h-16 rounded-lg" />
-      </div>
-      <Skeleton className="h-9 w-full rounded-md" />
+      <Skeleton className="size-9 shrink-0 rounded-full" />
     </Card>
   );
 }

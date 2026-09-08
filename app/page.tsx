@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import ChannelCard, { ChannelCardSkeleton } from "@/components/channel-card";
 import SummaryBar from "@/components/summary-bar";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,15 @@ import {
   Clock,
   Eye,
   Inbox,
+  LayoutGrid,
   RefreshCw,
   Settings,
   TrendingUp,
   Youtube,
 } from "lucide-react";
+
+const COLUMN_OPTIONS = [1, 2, 3, 4, 5] as const;
+const COLUMNS_STORAGE_KEY = "channels_per_row";
 
 const TRIBES_AND_REGIONS = [
   { id: "tangkhul", name: "Tangkhul", region: "Manipur" },
@@ -45,6 +49,7 @@ interface ApiError {
 export default function YouTubeDashboard() {
   const [selectedTribe, setSelectedTribe] = useState(TRIBES_AND_REGIONS[0].id);
   const [sortBy, setSortBy] = useState<"subscribers" | "views">("subscribers");
+  const [columnsPerRow, setColumnsPerRow] = useState(3);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
@@ -63,6 +68,18 @@ export default function YouTubeDashboard() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const stored = Number(localStorage.getItem(COLUMNS_STORAGE_KEY));
+    if (COLUMN_OPTIONS.includes(stored as (typeof COLUMN_OPTIONS)[number])) {
+      setColumnsPerRow(stored);
+    }
+  }, []);
+
+  const handleColumnsChange = (value: number) => {
+    setColumnsPerRow(value);
+    localStorage.setItem(COLUMNS_STORAGE_KEY, String(value));
+  };
 
   useEffect(() => {
     const fetchChannels = async (isAutoRefresh = false) => {
@@ -260,7 +277,7 @@ export default function YouTubeDashboard() {
             <label className="mb-2 block text-sm font-medium text-foreground">
               Select Tribe & Region
             </label>
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-12px),transparent)] sm:[mask-image:none]">
               {TRIBES_AND_REGIONS.map((tribe) => (
                 <button
                   key={tribe.id}
@@ -315,6 +332,28 @@ export default function YouTubeDashboard() {
               </button>
             </div>
           </div>
+
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <LayoutGrid className="size-3.5" />
+              Per row
+            </span>
+            <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+              {COLUMN_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  onClick={() => handleColumnsChange(n)}
+                  className={`min-w-8 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    columnsPerRow === n
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Summary Bar */}
@@ -342,7 +381,10 @@ export default function YouTubeDashboard() {
 
         {/* Channels Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <div
+            className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(max(240px,calc(100%_/_var(--cols))),1fr))]"
+            style={{ "--cols": columnsPerRow } as CSSProperties}
+          >
             {Array.from({ length: 8 }).map((_, i) => (
               <ChannelCardSkeleton key={i} />
             ))}
@@ -359,7 +401,10 @@ export default function YouTubeDashboard() {
             </Button>
           </div>
         ) : (
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <div
+            className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(max(240px,calc(100%_/_var(--cols))),1fr))]"
+            style={{ "--cols": columnsPerRow } as CSSProperties}
+          >
             {sortedChannels.map((channel, index) => (
               <ChannelCard
                 key={channel.id}
@@ -367,6 +412,7 @@ export default function YouTubeDashboard() {
                   ...channel,
                   rank: index + 1,
                 }}
+                metric={sortBy}
               />
             ))}
           </div>
