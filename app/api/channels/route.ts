@@ -3,6 +3,13 @@ import { NextResponse } from "next/server"
 
 interface YouTubeChannelItem {
   id: string
+  snippet?: {
+    thumbnails?: {
+      high?: { url: string }
+      medium?: { url: string }
+      default?: { url: string }
+    }
+  }
   statistics: {
     subscriberCount: string
     viewCount: string
@@ -51,7 +58,7 @@ async function fetchFreshYouTubeStats(channels: any[]) {
 
       // Fetch fresh data from YouTube API
       const statsResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelIds}&key=${apiKey}`,
+        `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelIds}&key=${apiKey}`,
       )
 
       if (!statsResponse.ok) {
@@ -69,6 +76,11 @@ async function fetchFreshYouTubeStats(channels: any[]) {
               subscribers: Number.parseInt(item.statistics.subscriberCount || "0"),
               views: Number.parseInt(item.statistics.viewCount || "0"),
               videoCount: Number.parseInt(item.statistics.videoCount || "0"),
+              thumbnailUrl:
+                item.snippet?.thumbnails?.medium?.url ||
+                item.snippet?.thumbnails?.high?.url ||
+                item.snippet?.thumbnails?.default?.url ||
+                null,
             }
             allStats.set(item.id, stats)
             batchStats.set(item.id, stats)
@@ -85,6 +97,7 @@ async function fetchFreshYouTubeStats(channels: any[]) {
       ...channel,
       subscribers: allStats.get(channel.youtube_channel_id)?.subscribers || 0,
       views: allStats.get(channel.youtube_channel_id)?.views || 0,
+      thumbnail_url: channel.thumbnail_url || allStats.get(channel.youtube_channel_id)?.thumbnailUrl || null,
     }))
 
   } catch (error) {

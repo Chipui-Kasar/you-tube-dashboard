@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type CSSProperties } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import ChannelCard, { ChannelCardSkeleton } from "@/components/channel-card";
 import SummaryBar from "@/components/summary-bar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import {
   Eye,
   Inbox,
   LayoutGrid,
+  Maximize2,
+  Minimize2,
   RefreshCw,
   Settings,
   TrendingUp,
@@ -50,11 +52,13 @@ export default function YouTubeDashboard() {
   const [selectedTribe, setSelectedTribe] = useState(TRIBES_AND_REGIONS[0].id);
   const [sortBy, setSortBy] = useState<"subscribers" | "views">("subscribers");
   const [columnsPerRow, setColumnsPerRow] = useState(3);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const isInitialLoadRef = useRef(true);
+  const loadingRef = useRef(true);
 
   // Auto-refresh interval in minutes (5 minutes = 5 * 60 * 1000 ms)
   const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -64,7 +68,8 @@ export default function YouTubeDashboard() {
     const hasLoadedBefore =
       sessionStorage.getItem("channels_loaded") === "true";
     if (hasLoadedBefore) {
-      setIsInitialLoad(false);
+      isInitialLoadRef.current = false;
+      loadingRef.current = false;
       setLoading(false);
     }
   }, []);
@@ -82,10 +87,35 @@ export default function YouTubeDashboard() {
   };
 
   useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error("[v0] Error toggling fullscreen:", error);
+      toast.error("Fullscreen is not available in this browser");
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
     const fetchChannels = async (isAutoRefresh = false) => {
       try {
         // Only show loading spinner on initial load, not on auto-refresh
-        if (isInitialLoad && !isAutoRefresh) {
+        if (isInitialLoadRef.current && !isAutoRefresh) {
+          loadingRef.current = true;
           setLoading(true);
         }
         setError(null);
@@ -98,6 +128,7 @@ export default function YouTubeDashboard() {
 
         // Fetch channels with fresh YouTube stats
         const response = await fetch("/api/channels");
+        if (cancelled) return;
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -112,7 +143,7 @@ export default function YouTubeDashboard() {
 
         // Mark as loaded in session storage
         sessionStorage.setItem("channels_loaded", "true");
-        setIsInitialLoad(false);
+        isInitialLoadRef.current = false;
 
         console.log(
           `[v0] Successfully ${isAutoRefresh ? "auto-refreshed" : "loaded"} ${
@@ -120,13 +151,17 @@ export default function YouTubeDashboard() {
           } channels with fresh stats`
         );
       } catch (error) {
+        if (cancelled) return;
         console.error("[v0] Error fetching channels:", error);
         setError({
           error: "Connection error",
           message: "Failed to connect to the server",
         });
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          loadingRef.current = false;
+          setLoading(false);
+        }
       }
     };
 
@@ -137,14 +172,17 @@ export default function YouTubeDashboard() {
     const intervalId = setInterval(() => {
       console.log("[v0] Auto-refreshing data...");
       // Only refresh if not currently loading
-      if (!loading) {
+      if (!loadingRef.current) {
         fetchChannels(true); // Pass true for auto-refresh
       }
     }, AUTO_REFRESH_INTERVAL);
 
     // Cleanup interval on component unmount
-    return () => clearInterval(intervalId);
-  }, [AUTO_REFRESH_INTERVAL, isInitialLoad]);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [AUTO_REFRESH_INTERVAL]);
 
   const tribeChannels = channels.filter(
     (ch) => ch.tribe.toLowerCase() === selectedTribe.toLowerCase()
@@ -220,6 +258,18 @@ export default function YouTubeDashboard() {
                     className={`size-4 ${loading ? "animate-spin" : ""}`}
                   />
                   {loading ? "Refreshing..." : "Refresh"}
+                </Button>
+                <Button
+                  onClick={toggleFullscreen}
+                  variant="outline"
+                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="size-4" />
+                  ) : (
+                    <Maximize2 className="size-4" />
+                  )}
+                  {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 </Button>
                 <Button asChild>
                   <a href="/admin">

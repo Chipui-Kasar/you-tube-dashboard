@@ -63,10 +63,27 @@ export default function ChannelCard({
         src={channel.thumbnail_url || "/placeholder.svg"}
         alt={channel.channel_name}
         className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover transition-transform duration-200 group-hover:scale-105"
+        referrerPolicy="no-referrer"
+        onError={(e) => {
+          const img = e.currentTarget;
+          const originalSrc = channel.thumbnail_url || "/placeholder.svg";
+          if (!channel.thumbnail_url || img.dataset.retried) {
+            img.src = "/placeholder.svg";
+            return;
+          }
+          // Transient load failures (network blip, connection-pool
+          // congestion from many thumbnails loading at once) happen
+          // occasionally on real CDN images — retry the same URL once,
+          // after a short delay, before giving up.
+          img.dataset.retried = "1";
+          setTimeout(() => {
+            img.src = originalSrc;
+          }, 800 + Math.random() * 800);
+        }}
       />
 
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+        <h3 className="truncate text-base font-bold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-lg">
           {channel.channel_name}
         </h3>
         <div className="mb-0.5 flex items-center gap-1">
