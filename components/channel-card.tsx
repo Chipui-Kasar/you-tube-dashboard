@@ -28,6 +28,12 @@ const WIDGET_WIDTH = 340;
 const WIDGET_HEIGHT = 98;
 const NUMBER_COL_LEFT_OFFSET = 114;
 const NUMBER_ROW_TOP_OFFSET = 47;
+// The number itself renders at a fixed font size inside the widget, so
+// giving it more container width only reduces truncation — it doesn't make
+// the digits bigger. Scaling the cropped view up (zoomed from its top-left
+// corner, where the crop already starts) makes the number visibly larger.
+const NUMBER_SCALE = 1.35;
+const NUMBER_ROW_HEIGHT = 36 * NUMBER_SCALE;
 
 export default function ChannelCard({
   channel,
@@ -95,7 +101,10 @@ export default function ChannelCard({
             Live {metric === "views" ? "views" : "subscribers"}
           </span>
         </div>
-        <div className="relative h-9 w-full max-w-[180px] overflow-hidden rounded-md ring-1 ring-inset ring-border/50">
+        <div
+          className="relative w-full max-w-[240px] overflow-hidden rounded-md ring-1 ring-inset ring-border/50"
+          style={{ height: NUMBER_ROW_HEIGHT }}
+        >
           <iframe
             key={metric}
             title={`${channel.channel_name} live ${metric === "views" ? "view" : "subscriber"} count`}
@@ -107,6 +116,8 @@ export default function ChannelCard({
               left: -NUMBER_COL_LEFT_OFFSET,
               width: WIDGET_WIDTH,
               height: WIDGET_HEIGHT,
+              transform: `scale(${NUMBER_SCALE})`,
+              transformOrigin: `${NUMBER_COL_LEFT_OFFSET}px ${NUMBER_ROW_TOP_OFFSET}px`,
             }}
           />
         </div>
