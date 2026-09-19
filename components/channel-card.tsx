@@ -62,7 +62,7 @@ export default function ChannelCard({
       <img
         src={channel.thumbnail_url || "/placeholder.svg"}
         alt={channel.channel_name}
-        className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover transition-transform duration-200 group-hover:scale-105"
+        className="h-16 w-16 shrink-0 rounded-lg border border-border object-cover transition-transform duration-200 group-hover:scale-105 sm:h-20 sm:w-20"
         referrerPolicy="no-referrer"
         onError={(e) => {
           const img = e.currentTarget;
@@ -83,7 +83,7 @@ export default function ChannelCard({
       />
 
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-base font-bold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-lg">
+        <h3 className="truncate text-xl font-bold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-2xl">
           {channel.channel_name}
         </h3>
         <div className="mb-0.5 flex items-center gap-1">
@@ -129,9 +129,9 @@ export function ChannelCardSkeleton() {
   return (
     <Card className="flex flex-row items-center gap-3 p-3">
       <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-      <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
+      <Skeleton className="h-16 w-16 shrink-0 rounded-lg sm:h-20 sm:w-20" />
       <div className="min-w-0 flex-1">
-        <Skeleton className="mb-1.5 h-4 w-2/3" />
+        <Skeleton className="mb-1.5 h-6 w-2/3" />
         <Skeleton className="h-5 w-1/2" />
       </div>
       <Skeleton className="size-9 shrink-0 rounded-full" />
