@@ -106,6 +106,41 @@ async function fetchFreshYouTubeStats(channels: any[]) {
   }
 }
 
+// The mixerno API only accepts one channel ID per request, so a true
+// single-request batch isn't possible — instead, fire all of a batch's
+// requests concurrently (Promise.allSettled) rather than each card polling
+// independently, so it's one coordinated round of fetches per refresh.
+async function applyMixernoOverrides(channels: any[]) {
+  const mixernoChannels = channels.filter((channel) => channel.source === "mixerno")
+  if (mixernoChannels.length === 0) return channels
+
+  const results = await Promise.allSettled(
+    mixernoChannels.map(async (channel) => {
+      const response = await fetch(
+        `https://brandid.app/instagram-audit-tool/api/youtube/channel/${channel.youtube_channel_id}`,
+      )
+      if (!response.ok) throw new Error(`mixerno request failed: ${response.status}`)
+      const json = await response.json()
+      if (!json?.success) throw new Error("mixerno response unsuccessful")
+      return { id: channel.id, subscribers: json.data.subscribers, views: json.data.views }
+    }),
+  )
+
+  const overrides = new Map<number, { subscribers: number; views: number }>()
+  results.forEach((result) => {
+    if (result.status === "fulfilled") {
+      overrides.set(result.value.id, result.value)
+    } else {
+      console.error("[v0] Error fetching mixerno stats:", result.reason)
+    }
+  })
+
+  return channels.map((channel) => {
+    const override = overrides.get(channel.id)
+    return override ? { ...channel, ...override } : channel
+  })
+}
+
 export async function GET() {
   try {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -156,7 +191,8 @@ export async function GET() {
     }
 
     const channelsWithStats = await fetchFreshYouTubeStats(data || [])
-    return NextResponse.json(channelsWithStats)
+    const channelsWithMixerno = await applyMixernoOverrides(channelsWithStats)
+    return NextResponse.json(channelsWithMixerno)
   } catch (error) {
     console.error("[v0] Error fetching channels:", error instanceof Error ? error.message : JSON.stringify(error))
     // Return empty array instead of error to allow app to load

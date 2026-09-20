@@ -19,42 +19,96 @@ const RANK_STYLES: Record<number, string> = {
   3: "bg-gradient-to-br from-amber-600 to-amber-800 text-amber-50 ring-2 ring-amber-600/40",
 };
 
-// The live-counter widget is a fixed layout: a 96px avatar on the left, and
-// a name+number text column to its right (name on top, number below). We
-// only want the number, so the iframe is rendered at a fixed natural width
-// (wide enough that the widget never truncates the number) and shifted up
-// and left inside a clipped wrapper so just the number cell is visible.
-const WIDGET_WIDTH = 340;
-const WIDGET_HEIGHT = 98;
-const NUMBER_COL_LEFT_OFFSET = 114;
-const NUMBER_ROW_TOP_OFFSET = 47;
+// Both live-counter providers use the same shape of layout: an avatar on
+// the left, and a name+number text column to its right (name on top,
+// number below). We only want the number, so each iframe is rendered at
+// its own natural size and shifted up-left inside a clipped wrapper so
+// just the number cell is visible. The two providers use different fixed
+// pixel layouts, so each needs its own calibrated offsets.
 // The number itself renders at a fixed font size inside the widget, so
 // giving it more container width only reduces truncation — it doesn't make
-// the digits bigger. Scaling the cropped view up (zoomed from its top-left
-// corner, where the crop already starts) makes the number visibly larger.
-const NUMBER_SCALE = 1.35;
-const NUMBER_ROW_HEIGHT = 36 * NUMBER_SCALE;
+// the digits bigger. Scaling the cropped view up (zoomed from the number's
+// own top-left corner, so it grows in place) makes it visibly larger. Both
+// providers are scaled to the same on-screen number height so rows stay a
+// consistent size regardless of which provider a given channel uses.
+const TARGET_NUMBER_HEIGHT = 48.6;
+
+const PROVIDER_LAYOUT = {
+  socialcounts: {
+    widgetWidth: 340,
+    widgetHeight: 98,
+    numberLeft: 114,
+    numberTop: 47,
+    numberNaturalHeight: 36,
+    // socialcounts renders a dark card already; neutralize its blue tint.
+    filterClassName: "grayscale-[35%] contrast-125",
+  },
+  livecounts: {
+    widgetWidth: 340,
+    widgetHeight: 80,
+    numberLeft: 88,
+    numberTop: 37,
+    numberNaturalHeight: 41,
+    // livecounts always renders on a hardcoded white background with black
+    // text (it doesn't follow a dark theme like socialcounts does), so it
+    // never matches the dark-pill look. Inverting flips white↔black,
+    // turning it into a dark card with light text to match.
+    filterClassName: "invert contrast-125",
+  },
+} as const;
 
 export default function ChannelCard({
   channel,
   metric,
+  isPulsing,
 }: {
   channel: Channel;
   metric: "subscribers" | "views";
+  isPulsing?: boolean;
 }) {
   const rankStyle =
     RANK_STYLES[channel.rank] ?? "bg-primary text-primary-foreground";
   const liveUrl = `https://www.youtube.com/channel/${channel.youtube_channel_id}/live`;
+
+  const provider =
+    channel.source === "mixerno"
+      ? "mixerno"
+      : channel.source === "livecounts"
+        ? "livecounts"
+        : "socialcounts";
+
+  const iframeLayout =
+    provider === "mixerno" ? null : PROVIDER_LAYOUT[provider];
+  const numberScale = iframeLayout
+    ? TARGET_NUMBER_HEIGHT / iframeLayout.numberNaturalHeight
+    : 1;
   const counterUrl =
-    metric === "views"
-      ? `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed?counter=0`
-      : `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed`;
+    provider === "livecounts"
+      ? `https://livecounts.io/embed/youtube-live-${metric === "views" ? "view" : "subscriber"}-counter/${channel.youtube_channel_id}`
+      : provider === "socialcounts"
+        ? metric === "views"
+          ? `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed?counter=0`
+          : `https://socialcounts.org/youtube-live-subscriber-count/${channel.youtube_channel_id}/embed`
+        : null;
+  // mixerno stats are batch-fetched server-side (see /api/channels) and
+  // arrive on the channel object itself, same as the other stat sources.
+  const mixernoValue = metric === "views" ? channel.views : channel.subscribers;
 
   return (
     <Card
-      className="animate-row-enter group flex flex-row items-center gap-3 p-3 transition-all duration-200 hover:border-primary/50 hover:bg-muted/40 hover:shadow-md"
+      className="animate-row-enter group relative flex flex-row items-center gap-3 p-3 transition-all duration-200 hover:border-primary/50 hover:bg-muted/40 hover:shadow-md"
       style={{ animationDelay: `${Math.min(channel.rank * 30, 400)}ms` }}
     >
+      {isPulsing && (
+        <div
+          className="fire-glow pointer-events-none absolute -inset-3 -z-10 rounded-xl blur-md"
+          style={{
+            background:
+              "radial-gradient(55% 100% at 18% 100%, rgba(255,138,0,0.65), transparent 60%), radial-gradient(50% 95% at 52% 100%, rgba(255,55,0,0.6), transparent 55%), radial-gradient(45% 90% at 84% 100%, rgba(255,196,0,0.55), transparent 55%)",
+          }}
+        />
+      )}
+
       <div
         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${rankStyle}`}
       >
@@ -102,24 +156,34 @@ export default function ChannelCard({
           </span>
         </div>
         <div
-          className="relative w-full max-w-[240px] overflow-hidden rounded-md ring-1 ring-inset ring-border/50"
-          style={{ height: NUMBER_ROW_HEIGHT }}
+          className="relative flex w-full max-w-[240px] items-center overflow-hidden rounded-md bg-neutral-900 ring-1 ring-inset ring-border/50"
+          style={{ height: TARGET_NUMBER_HEIGHT }}
         >
-          <iframe
-            key={metric}
-            title={`${channel.channel_name} live ${metric === "views" ? "view" : "subscriber"} count`}
-            src={counterUrl}
-            scrolling="no"
-            className="absolute grayscale-[35%] contrast-125 border-0"
-            style={{
-              top: -NUMBER_ROW_TOP_OFFSET,
-              left: -NUMBER_COL_LEFT_OFFSET,
-              width: WIDGET_WIDTH,
-              height: WIDGET_HEIGHT,
-              transform: `scale(${NUMBER_SCALE})`,
-              transformOrigin: `${NUMBER_COL_LEFT_OFFSET}px ${NUMBER_ROW_TOP_OFFSET}px`,
-            }}
-          />
+          {provider === "mixerno" ? (
+            <span className="truncate px-2.5 text-3xl font-bold text-white">
+              {mixernoValue !== null && mixernoValue !== undefined
+                ? mixernoValue.toLocaleString("en-US")
+                : "…"}
+            </span>
+          ) : (
+            iframeLayout && (
+              <iframe
+                key={`${provider}-${metric}`}
+                title={`${channel.channel_name} live ${metric === "views" ? "view" : "subscriber"} count`}
+                src={counterUrl ?? undefined}
+                scrolling="no"
+                className={`absolute border-0 ${iframeLayout.filterClassName}`}
+                style={{
+                  top: -iframeLayout.numberTop,
+                  left: -iframeLayout.numberLeft,
+                  width: iframeLayout.widgetWidth,
+                  height: iframeLayout.widgetHeight,
+                  transform: `scale(${numberScale})`,
+                  transformOrigin: `${iframeLayout.numberLeft}px ${iframeLayout.numberTop}px`,
+                }}
+              />
+            )
+          )}
         </div>
       </div>
 

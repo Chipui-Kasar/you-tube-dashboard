@@ -54,6 +54,10 @@ export default function YouTubeDashboard() {
   const [columnsPerRow, setColumnsPerRow] = useState(3);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [pulsingIds, setPulsingIds] = useState<Set<number>>(new Set());
+  const previousStatsRef = useRef<Map<number, { subscribers: number; views: number }>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
@@ -84,6 +88,37 @@ export default function YouTubeDashboard() {
   const handleColumnsChange = (value: number) => {
     setColumnsPerRow(value);
     localStorage.setItem(COLUMNS_STORAGE_KEY, String(value));
+  };
+
+  const applyChannels = (data: Channel[]) => {
+    const increasedIds: number[] = [];
+    for (const ch of data) {
+      const prev = previousStatsRef.current.get(ch.id);
+      if (prev && (ch.subscribers > prev.subscribers || ch.views > prev.views)) {
+        increasedIds.push(ch.id);
+      }
+      previousStatsRef.current.set(ch.id, {
+        subscribers: ch.subscribers,
+        views: ch.views,
+      });
+    }
+
+    setChannels(data);
+
+    if (increasedIds.length > 0) {
+      setPulsingIds((prev) => {
+        const next = new Set(prev);
+        increasedIds.forEach((id) => next.add(id));
+        return next;
+      });
+      setTimeout(() => {
+        setPulsingIds((prev) => {
+          const next = new Set(prev);
+          increasedIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }, 2600);
+    }
   };
 
   useEffect(() => {
@@ -138,7 +173,7 @@ export default function YouTubeDashboard() {
         }
 
         const data = await response.json();
-        setChannels(Array.isArray(data) ? data : []);
+        applyChannels(Array.isArray(data) ? data : []);
         setLastSyncTime(new Date());
 
         // Mark as loaded in session storage
@@ -213,7 +248,7 @@ export default function YouTubeDashboard() {
       if (!response.ok) throw new Error("Failed to fetch fresh stats");
 
       const result = await response.json();
-      setChannels(Array.isArray(result) ? result : []);
+      applyChannels(Array.isArray(result) ? result : []);
       setLastSyncTime(new Date());
 
       toast.success(
@@ -239,11 +274,13 @@ export default function YouTubeDashboard() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-                  YouTube Tribal Top Channels
+                  Top {currentTribe?.name}{" "}
+                  {sortBy === "views" ? "Viewed" : "Subscribed"} YouTube
+                  Channels
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Explore the top-performing YouTube channels by tribe and
-                  region
+                  Explore the top-performing {currentTribe?.name} YouTube
+                  channels in {currentTribe?.region}
                 </p>
               </div>
             </div>
@@ -463,6 +500,7 @@ export default function YouTubeDashboard() {
                   rank: index + 1,
                 }}
                 metric={sortBy}
+                isPulsing={pulsingIds.has(channel.id)}
               />
             ))}
           </div>
