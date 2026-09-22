@@ -21,12 +21,20 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  // Refresh session if needed
-  await supabase.auth.getSession()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
+  const isProtectedAdminRoute = pathname.startsWith("/admin") && pathname !== "/admin/login"
+
+  if (isProtectedAdminRoute && user?.app_metadata?.is_admin !== true) {
+    return NextResponse.redirect(new URL("/admin/login", request.url))
+  }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.svg).*)"],
+  matcher: ["/admin/:path*"],
 }

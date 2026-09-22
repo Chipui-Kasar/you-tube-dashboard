@@ -29,26 +29,9 @@ export async function getAuthenticatedUser() {
 }
 
 export async function getAdminUser() {
-  try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get("admin_session")
-
-    if (!sessionCookie || !sessionCookie.value) {
-      console.log("[v0] No admin session cookie found")
-      return null
-    }
-
-    const session = JSON.parse(sessionCookie.value)
-    
-    if (!session || !session.email) {
-      console.log("[v0] Invalid session data")
-      return null
-    }
-
-    console.log("[v0] Admin user verified:", session.email)
-    return session
-  } catch (error) {
-    console.error("[v0] Error verifying admin user:", error)
+  const user = await getAuthenticatedUser()
+  if (!user || user.app_metadata?.is_admin !== true) {
     return null
   }
+  return user
 }

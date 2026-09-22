@@ -145,12 +145,16 @@ export default function YouTubeDashboard() {
 
   useEffect(() => {
     let cancelled = false;
+    let lastFetchAt = Date.now();
 
     const fetchChannels = async (isAutoRefresh = false) => {
+      // Skip if a fetch is already in flight (auto-refresh only; manual/initial always proceed)
+      if (isAutoRefresh && loadingRef.current) return;
+
+      loadingRef.current = true;
       try {
-        // Only show loading spinner on initial load, not on auto-refresh
+        // Only show the full skeleton on initial load, not on auto-refresh
         if (isInitialLoadRef.current && !isAutoRefresh) {
-          loadingRef.current = true;
           setLoading(true);
         }
         setError(null);
@@ -175,6 +179,7 @@ export default function YouTubeDashboard() {
         const data = await response.json();
         applyChannels(Array.isArray(data) ? data : []);
         setLastSyncTime(new Date());
+        lastFetchAt = Date.now();
 
         // Mark as loaded in session storage
         sessionStorage.setItem("channels_loaded", "true");
@@ -206,16 +211,27 @@ export default function YouTubeDashboard() {
     // Set up auto-refresh interval
     const intervalId = setInterval(() => {
       console.log("[v0] Auto-refreshing data...");
-      // Only refresh if not currently loading
-      if (!loadingRef.current) {
-        fetchChannels(true); // Pass true for auto-refresh
-      }
+      fetchChannels(true); // Pass true for auto-refresh
     }, AUTO_REFRESH_INTERVAL);
+
+    // Timers are throttled/paused while the tab is hidden or the machine is
+    // asleep, so catch up immediately once it becomes visible again if a
+    // refresh was missed.
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        Date.now() - lastFetchAt >= AUTO_REFRESH_INTERVAL
+      ) {
+        fetchChannels(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Cleanup interval on component unmount
     return () => {
       cancelled = true;
       clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [AUTO_REFRESH_INTERVAL]);
 

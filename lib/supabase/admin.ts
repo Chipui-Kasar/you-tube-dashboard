@@ -1,9 +1,6 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@supabase/supabase-js"
 
 export async function createAdminClient() {
-  const cookieStore = await cookies()
-
   // Use SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from the integration
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -14,19 +11,15 @@ export async function createAdminClient() {
     )
   }
 
-  return createServerClient(supabaseUrl, serviceRoleKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll()
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        } catch {
-          // The "setAll" method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
-        }
-      },
+  // Deliberately not cookie-backed: this must always authenticate as the
+  // service role, regardless of any signed-in user's session in the request.
+  // A cookie-backed (@supabase/ssr) client here would pick up the caller's
+  // own session and silently downgrade every query to that user's RLS
+  // permissions instead of bypassing RLS.
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
   })
 }
